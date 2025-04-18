@@ -1,0 +1,277 @@
+# 💻 2025-1 Cryptography
+
+## 👀 [03] AES(Advanced Encryption Standard)
+
+### 몇 가지 기본적인 사실(Some Basic Facts)
+- AES는 현재 가장 널리 사용되는 대칭 암호(Symmetric Cipher)
+- 미국의 NIST(National Institute of Standards and Technology)는 여러 해에 걸친 공모를 통해 AES 알고리즘 선택
+- AES 후보 제출을 위한 요구사항
+  - 128 bit 블록 크기를 가지는 블록 암호(Block Cipher)
+  - 128, 192, 256 bit의 키 길이(Key Length) 지원
+  - 제출된 다른 알고리즘에 비해 상대적으로 안전해야 함
+  - S/W 및 H/W 구현에서 효율적이어야 함
+- AES 선택 과정
+  - 1997년 1월 NIST가 새로운 블록 암호의 필요성 공표
+  - 1998년 8월 15개의 후보 알고리즘 수신
+  - 1999년 8월 5개의 최종 알고리즘 발표
+  - 2000년 10월 NIST가 *Rijndael*을 최종 AES로 발표
+  - 2001년 11월 AES가 미 연방 표준으로 공인
+
+<br>
+
+### AES 알고리즘 개요
+- AES에서는 입출력의 블록 크기는 128 bit로 고정
+- 키 길이는 128, 192, 256 bit 가능
+  - 이에 따른 라운드의 수(Number of Internal Rounds)도 달라짐
+    - 128 bit => 10 rounds
+    - 192 bit => 12 rounds
+    - 256 bit => 14 rounds
+- 10/12/14 라운드를 갖는 반복적인 구조
+- 각 라운드는 여러 계층(Layers)으로 구성
+- 각 계층은 데이터 경로(Data Path)의 128 bit 전체를 다룸
+  - 각 데이터 경로를 알고리즘의 상태(State)라고 함
+- **Key Addition Layer**
+  - 키 스케줄에서 메인 키(Main-Key)에서 파생된 128 bit의 라운드 키(Round Key) 또는 서브 키(Sub-Key)가 상태에 XOR됨
+- **Byte Substitution Layer(S-Box)**
+  - 각 상태의 요소는 특별한 수학적 특성을 가지는 Lookup Table을 이용하여 비선형적으로 변형되어 데이터에 혼돈(Confusion)을 가함
+    - 각각의 상태 비트의 변화가 데이터 경로를 통해 빠르게 전달됨
+- **Diffusion Layer**
+  - 모든 상태 비트에 확산 제공 
+  - *ShiftRows Layer*: 바이트 레벨로 데이터를 전치(Permutation)
+  - *MixColumn Layer*: 4 byte 블록을 결합(혼합)하는 행렬 연산
+
+<br>
+
+### 갈루아 체 개론(Brief Introduction to Galois Fields)
+- 학습 필요성
+  - AES의 대부분 계층, 특히 S-Box 및 MixColumn 계층에서 갈루아 체 연산이 이용됨
+- 유한체(Finite Fields)의 존재
+  - 유한체(called; 갈루아 체)는 한정된 원소들의 집합
+  - 대체로 유한체 내에서 원소들끼리의 덧셈, 뺄셈, 곱셈 등이 가능함
+  - **군(Group): 집합 $G$와 연산 ◦로 구성됨**
+    - 군 연산(Group Operation) ◦는 닫혀 있음
+      - $for$ $all$ $a,b\in{G},a◦b=c\in{G}$
+    - 군 연산은 결합법칙(Associative) 성립
+      - $for$ $all$ $a,b,c\in{G},a◦(b◦c)=(a◦b)◦c$
+    - 항등원(Neutral Element or Identity Element) $e\in{G}$ 존재
+      - $for$ $all$ $a\in{G},a◦e=e◦a=a$
+    - 각 $a\in{G}$에 대해 $a◦a^{-1}=a^{-1}◦a=e$인 $a$의 역원(Inverse) $a^{-1}\in{G}$ 존재
+    - 모든 군 $a,b\in{G}$에 대해 $a◦b=b◦a$이 성립하면, 군 $G$는 아벨군(Abelian)이며 교환법칙(Commutative) 성립
+  - 군은 하나의 연산과 이에 대응하는 역 연산(Inverse Operation)을 갖는 집합이라고 할 수 있음
+    - 즉, 덧셈 또는 곱셈에 대한 역 연산은 뺄셈 또는 나눗셈 
+  - *군 예제*
+    - 정수 집합 $Z_m={0,1,...,m-1}$과 모듈러 $m$ 상의 뎃셈 연산은 항등원 0을 가지는 군을 이룸
+    - 모든 원소 $a$에 대해 역원 $-a$이 존재
+      - $a+(-a)=0$ $mod$ $m$
+    - 이 집합은 곱셈 연산에 대해서 군 구성이 불가함
+      - 대부분의 원소 $a$가 $a*a^{-1}=1$ $mod$ $m$인 역원을 갖지 못하기 때문
+  - 한 구조 내에서 기본적인 사칙연산이 존재하려면, 덧셈군(Additive Group)과 곱셈군(Multiplicative Group)을 포함하는 집합이 필요하며, 이를 체(Field)라고 함
+  - **체(Field)**
+    - 체 $F$는 다음의 특성을 갖는 원소들의 집합
+    - $F$의 모든 원소는 군 연산 +와 항등원 0이 존재하고 교환법칙이 성립하는 덧셈아벨군(Additive Abelian Group)을 이룸
+    - 0을 제외한 $F$의 모든 원소는 군 연산 $\times$와 항등원 1이 존재하고 교환법칙이 성립하는 곱셈아벨군(Multiplicative Abelian Group)을 이룸
+    - 두 개의 군 연산이 결합했을 때, 분배법칙(Distributive) 성립
+      - 모든 $a,b,c\in{F}$에 대해, $a(b+c)=ab+ac$
+  - *체 예제*
+    - 실수 집합 $R$은 덧셈군에 대한 항등원 0과 곱셈군 1을 가지는 체임
+    - 모든 실수 $a$는 덧셈에 대한 역원 $-a$를 가지며 0이 아닌 모든 수 $a$는 곱셈에 대한 역원 $1/a$를 가짐
+  - 암호기술에서 거의 대부분 유한체 또는 갈루아 체라고 하는 유한의 원소를 가지는 체에 관심을 가지며, 체의 원소 개수를 Order 또는 Cardinality라고 함
+  - **Order(or Cardinality)**
+    - 임의의 양의 정수 $n$과 소수(Prime Number) $p$에 대해 $m=p^n$일 경우에만 Order $m$인 체가 존재함
+    - 이때, $p$를 유한체의 Characteristic이라고 함
+    - 11개의 원소 또는 $81=3^4$개의 원소 또는 $256=2^8$개의 원소를 갖는 유한체가 존재한다는 것을 의미
+    - 반면 $12=2^2*3$이므로 12개의 원소를 가지는 유한체는 존재하지 않는다는 것을 의미
+- 소체(Prime Fields)
+  - 유한체의 가장 직관적인 예로는 소수가 Order인 체
+    - $n=1$인 체
+  - 체 $GF(p)$의 원소는 정수 $0,1,...,p-1$로 표현
+    - 체의 두 개의 연산은 모듈러 $p$ 상에서 정수 덧셈과 정수 곱셈
+  - 소수인 $p$에 대해 정수환 $Z_p$를 $GF(p)$로 표기 가능하며 원소의 개수가 소수인 소체 또는 갈루아 체라고 함
+  - $GF(p)$의 0이 아닌 모든 원소는 역원을 가지며, $GF(p)$의 연산은 모듈러 $p$ 상에서 수행됨
+  - 소체 $GF(p)$에서 산술 연산을 수행하기 위해서는 정수환에 대한 다음 규칙을 따라야 함
+    - 덧셈과 곱셈은 모듈러 $p$ 상에서 수행됨
+    - 임의의 원소 $a$
+      - 덧셈에 대한 역원: $a+(-a)=0$ $mod$ $p$
+      - 곱셈에 대한 역원: $a*a^{-1}=1$
+  - $GF(2)={0,1}$의 덧셈은 XOR 연산과 동일하며, 곱셈은 AND 연산과 동일함
+- 확장체(Extension Fields): $GF(2^m)$
+  - AES에서 유한체는 256개의 원소를 포함하며 $GF(2^8)$로 표현
+    - 체의 원소 각각이 하나의 바이트로 표현 가능하기 때문
+  - S-Box와 MixColumn 등에 대해 AES는 내부 데이터 경로의 각 바이트를 체 $GF(2^8)$의 원소로 다루어 유한체 내에서의 산술 연산을 수행하며 데이터를 변경함
+  - 유한체의 Order가 소수가 아니고, $2^8$이 소수가 아니라면, 덧셈 및 곱셈 연산이 모듈러 $2^8$ 상에서 정수의 덧셈 및 곱셈으로 표현될 수 없음
+  - $m>1$인 그러한 체를 **확장체**라고 함
+  - 확장체의 원소들이 **다항식(Polynomials)으로 표현 가능**하고 확장체 내에서의 계산이 특정 형태의 **다항식 산술연산(Polynomial Arithmetic)으로 계산**됨
+  - 확장체 $GF(2^m)$에서 원소는 정수가 아닌 $GF(2)$의 계수를 갖는 다항식으로 표현됨
+  - 다항식의 최대 차수(Maximum Degree)는 $m-1$이므로, 각 원소에 대해 총 $m$개의 계수가 있음
+    - AES에서 사용되는 체 $GF(2^8)$에서 각 원소 $A\in{GF}(2^8)$
+      - $A(x)=a_7x^7+a_6x^6+...+a_1x+a_0$, $a_i\in{GF}(2)={0,1}$
+  - 이런 다항식은 정확하게 $256=2^8$개가 존재
+    - 256개의 다항식 집합이 유한체 $GF(2^8)$
+  - 각 다항식은 단순하게 8 bit 벡터 형태인 $A=(a_7,...,a_0)$와 같이 저장될 수도 있음
+- $GF(2^m)$에서의 덧셈과 뺄셈
+  - AES의 키 덧셈 계층에서는 확장체의 덧셈 이용
+    - 표준 다항식 덧셈 및 뺄셈 수행
+  - 계수의 덧셈과 뺄셈은 $GF(2)$에서 수행
+    - $A(x),B(x)\in{GF}(2^m)$
+    - Sum: $C(x)=A(x)+B(x)=\sum_{i=0}^{m-1} c_ix^i,c_i\equiv{a_i}+b_i$ $mod$ $2$
+    - Difference: $C(x)=A(x)-B(x)=\sum_{i=0}^{m-1} c_ix^i,c_i\equiv{a_i}-b_i\equiv{a_i}+b_i$ $mod$ $2$
+  - 계수의 덧셈과 뺄셈이 모듈러 2 상에서 수행되며, 비트 단위의 XOR 연산과 동일함
+  - 다항식의 차를 계산하면 다항식의 합과 같은 결과를 얻음
+- $GF(2^m)$에서의 곱셈
+  - AES의 MixColumn 변형의 핵심 연산
+    - 표준 다항식 곱셈 규칙에 따라 수행
+  - 모든 계수 $a_i,b_i,c'_i$는 $GF(2)$의 원소이고 계수의 산술 연산은 $GF(2)$에서 수행
+    - $A(x)\times{B(x)}=(a_{m-1}x^{m-1}+...+a_0)\times(b_{m-1}x^{m-1}+...+b_0)$
+    - $C'(x)=c'_{2m-2}x^{2m-2}+...+c'_0$
+    - $c'_0=a_0b_0$ $mod$ $2$
+    - $c'_1=a_0b_1+a_1b_0$ $mod$ $2$
+    - ...
+    - $c'_{2m-2}=a_{m-1}b_{m-1}\,mod\,2$
+    - $A(x),B(x)\in{GF}(2^m)$
+    - 기약 다항식(Irreducible Polynomial): $P(x)\equiv\sum_{i=0}^m p_ix^i,p_i\in{GF}(2)$
+    - Multiplication: $C(x)\equiv{A(x)}*B(x)$ $mod$ $P(x)$
+  - 곱 다항식(Product Polynomial) $C(x)$는 $m-1$보다 큰 차수를 갖게 되므로 축소되어야 함
+  - 소체에서의 곱셈처럼 $GF(p)$에서 두 정수를 곱한 후 그 결과를 소수로 나누고 그 나머지만을 고려
+    - 다항식으로 표현되는 확장체에서도 곱셈의 결과를 특정 다항식으로 나누고 그 나머지만을 고려
+  - 모듈러 축소를 위한 기약 다항식(Irreducible Polynomial) 필요
+    - 기약 다항식은 소수에 대응
+    - 기약 다항식의 인수는 1과 자기 자신의 다항식뿐
+  - 각각의 체 $GF(2^m)$는 $GF(2)$의 계수와 차수가 $m$인 기약 다항식 $P(x)$ 필요
+    - 모든 다항식이 Irreducible한 것은 아님
+    - $x^4+x^3+x+1$은 Reducible함
+      - $x^3+x+1=(x^2+x+1)(x^2+1)$이며, 확장체 $GF(2^4)$를 구성하는데 사용될 수 없기 때문
+  - **_AES에서는 기약 다항식으로 $P(x)=x^8+x^4+x^3+x+1$이 사용됨_**
+  - *확장체 곱셈 예제*
+    - 체 $GF(2^4)$에서 두 개의 다항식 $A(x)=x^3+x^2+1$과 $B(x)=x^2+x$를 곱셈
+    - 해당 갈루아 체의 주어진 기약 다항식은 $P(x)=x^4+x+1$
+    - $C'(x)=A(x)*B(x)=x^5+x^3+x^2+x$
+    - $C'(x)$를 다항식 나눗셈 방법으로 축소
+      - 때로는 최고차항 $x^4$와 $x^5$를 개별 축소하는게 쉬울 수 있음
+    - $x^4=1*P(x)+(x+1)$이므로 $x^4\equiv{x+1}$ $mod$ $P(x)$
+      - $x^5\equiv{x^2}+x$ $mod$ $P(x)$
+    - 중간 결과 $C'(x)$에 $x^5$에 대한 축소 표현 삽입
+      - $C(x)\equiv{x^5}+x^3+x^2+x$ $mod$ $P(x)$
+      - $C(x)\equiv{(x^2+x)}+(x^3+x^2+x)\equiv{x^3}$
+      - $A(x)*B(x)\equiv{x^3}$
+    - 갈루아 체 S/W 구현 시, $GF(2^m)$에서의 곱셈과 일반적인 정수 곱셈을 혼동하지 말아야 함
+    - 체의 원소(다항식)는 컴퓨터의 비트 벡터로 저장됨
+      - $A(x)*B(x)=C(x)$
+      - $(x^3+x^2+1)*(x^2+x)=x^3$
+      - $(1101)*(0110)=(1000)$
+- $GF(2^m)$에서의 역원(Inversion)
+  - $GF(2^8)$에서의 역원은 AES의 S-Box를 포함하는 바이트 대치 변형의 핵심 연산
+  - 유한체 $GF(2^m)$과 이에 해당하는 기약 다항식 $P(x)$가 주어졌을 때, 0이 아닌 $A\in{GF}(2^m)$의 역원 $A^{-1}$은 $A^{-1}(x)*A(x)=1$ $mod$ $P(x)$
+  - 작은 사이즈의 체(보통 $2^{16}$보다 작은 경우)에 대해서는 미리 계산된 역원을 포함하는 Lookup Table을 이용해 구함
+  - ![Lookup_table](Cryptography/Lookup_table.png)
+    - Lookup Table은 AES의 S-Box에서 사용되는 값을 보여주며, $GF(2^8)$ $mod$ $P(x)$에 대한 모든 역원을 16진법으로 표현
+      - 체 원소 0은 역원이 존재하지 않기에 특별한 경우로 분류하여 입력값 0에 대한 결과값을 0으로 대응함
+  - *확장체 역원 예제*
+    - 주어진 값이 16진수로 $C2$라면 $x^7+x^6+x=(11000010)=(C2)=(XY)$라고 표현 가능
+    - 해당 수의 역원은 $(2F)_{16}=(00101111)_2=x^5+x^3+x^2+x+1$
+    - 곱셈으로 검증 가능
+      - $(x^7+x^6+x)*(x^5+x^3+x^2+x+1)\equiv{1}$ $mod$ $P(x)$
+  - 곱셈에 대한 역원을 계산하기 위한 주요 알고리즘은 **확장된 유클리드 호제법(Extended Euclidean Algorithm)**
+
+<br>
+
+### AES의 내부 구조(Internal Structure)
+- AES의 단일 라운드 함수
+  - $A_0,...,A_{15}$: 16-byte Input($A_i$: 1 byte)
+  - $B_0,...,B_{15}$: 16-byte Output of S-Box
+  - $C_0,...,C_{15}$: 16-byte Output of ShiftRows and MixColumn Transformations
+  - $k_i$: 128-bit Subkey
+  - $C_0,...,C_{15}$와 $k_i$ XOR 연산
+  - AES에서는 Byte 단위의 연산
+    - DES(Data Encryption Standard)가 Bit 단위 연산
+- AES에서 데이터 상태(State) - 행렬 구조
+  - 16-byte(128-bit) Data Path: 4x4 행렬
+- 바이트 대치 계층(Byte Substitution Layer)
+  - 바이트 대치 계층은 다음 특성을 갖는 16개의 **S-Box**로 구성
+    - 모든 16개의 S-Box는 동일(Identical)
+    - AES의 유일 비선형(Nonlinear) 요소
+      - $S(A_i)+S(A_j)\not ={S(A_i+A_j)}$
+      - $for$ $i,j=0,1,...,15$
+      - 전단사 매핑(Bijective Mapping)으로 입력 바이트와 출력 바이트 사이에 일대일 매핑이 존재
+        - 유일 역변환 가능(Uniquely Reversible Mapping)
+  - S/W 구현 시 보통 Lookup Table로 구현
+  - *S-Box 예제*
+    - S-Box의 입력 $A_i=(C2)$에 대해 S-Box 출력 결과는 $S((C2))=(25)$
+    - $S(11000010)=(00100101)$
+    - S-Box가 전단사이지만, $S(A_i)=A_i$인 $A_i$는 존재하지 않음
+      - $S(00000000)=(01100011)$
+- 확산 계층(Diffusion Layer)
+  - 모든 입력 상태 비트에 확산을 제공하기 위한 계층
+  - 두 개의 하위 계층으로 구성
+    - **ShiftRows**: 바이트 단위의 데이터 전치(Permutation)
+      - 상태 행렬의 각 행을 순환 이동(Cyclically Shifted)
+    - **MixColumn**: 4-byte 블록을 결합(Combination or Mix)하기 위한 행렬 연산(Matrix Operation)
+      - 상태 행렬의 각 열을 혼합시키는 선형 변환
+        - $MixColumn(B)=C$
+      - 4 byte의 각 열을 벡터로 간주하고 고정된 4x4 행렬과 곱셈
+      - 모든 산술 연산은 **갈루아 체 $GF(2^8)$에서 수행**
+  - 확산 계층에서는 비선형 연산인 S-Box와 다르게 상태 행렬 A, B에 대해 선형 연산(Linear Operation) 수행
+    - $DIFF(A)+DIFF(B)=DIFF(A+B)$
+- 키 덧셈 계층(Key Addition Layer)
+  - Input
+    - 16-byte 상태 행렬 C
+    - 16-byte 서브키 $k_i$
+  - Output
+    - $C⊕k_i$
+  - 서브키들은 키 스케줄(Key Schedule)에 의해 생성됨
+- 키 스케줄(Key Schedule)
+  - 서브키들은 128, 192, 256 bit의 오리지널 입력 키(Original Input Key)로부터 재귀적으로 유도됨
+  - AES 수행 시작 시 1개의 서브키 필요, 각 라운드별 1개의 서브키 필요
+    - 총 서브키의 개수는 $N_r+1$
+    - 192 bit AES의 경우 12 라운드로 구성되어 있으므로 13개의 서브키 필요
+  - 128-bit 키를 갖는 AES의 키 스케줄 
+    - Word 단위 연산 수행(1 word = 32 bits)
+    - 11개의 서브키가 $W[0],...,W[3],...,W[40],...,W[43]$에 저장됨
+    - $K_0,...,K_{15}$는 오리지널 AES 키의 각 바이트 표현
+    - 첫 번째 서브키 $k_0$는 오리지널 AES 키
+    - 일반적인 서브키($k_1,...,k_{10}$)에서 가장 왼쪽(Leftmost)의 Word는 $W[4i]=W[4(i-1)]+g(W[4i-1])$
+      - 이어진 나머지 세 Words는 $W[4i+j]=W[4i+j-1]+W[4(i-1)+j]$ $for$ $i=1,...,10,$ $j=1,2,3$
+    - 함수 $g(.)$는 4개의 입력 바이트를 순환 이동하고 바이트 단위의 S-Box 대치 수행
+      - 라운드 계수(RC; Round Coefficient)를 해당 결과 일부에 더함
+    - 8 bit 값의 RC는 갈루아 체 $GF(2^8)$내의 원소를 나타내며, 각 라운드마다 다양한 값을 가짐
+      - $RC[1]=x^0=(00000001)_2$
+      - $RC[2]=x^1=(00000010)_2$
+      - $RC[3]=x^2=(00000100)_2$
+      - ...
+      - $RC[10]=x^9=(00110110)_2$ => 모듈러 축소 연산 필요
+    - 함수 $g(.)$는 다음 두 가지 목적을 가짐
+      - 키 스케줄에 비선형성을 더함
+      - AES에서의 대칭성(Symmetry)를 제거함
+
+<br>
+
+### AES의 복호화(Decrypion)
+- AES 모든 계층은 복호화를 위해 역 연산되어야 함
+- Inverse MixColumn 하위 계층
+  - 상태 행렬 C에 4x4 역행렬 곱셈
+  - 모든 산술 연산은 갈루아 체 $GF(2^8)$에서 실행되어야 함
+- Inverse ShiftRows 하위 계층
+  - 상태 행렬 $B=(B_0,...,B_{15})$의 모든 행은 반대 방향으로 이동
+- Inverse Byte Substitution 계층
+  - S-Box는 전단사(bijective)이므로, 역변환 가능
+    - $S^{-1}(B_i)=S^{-1}(S(A_i))=A_i$
+  - Inverse S-Box가 복호화에 사용될 때, 대체로 Lookup Table을 이용해 구현됨
+- 복호화 키 스케줄
+  - 서브키들은 암호화의 역순(Reversed Order) 필요
+  - 실제로는 암호화와 복호화에 동일한 키 스케줄 사용
+    - 모든 서브키들이 첫 번째 블록 암호화 이전에 미리 계산되어 있어야 함을 의미
+
+<br>
+
+### 실용화 관련 이슈
+- S/W 및 H/W 구현
+  - S/W 구현
+    - DES와 달리 AES는 S/W 구현이 가능하도록 설계됨
+    - 바이트 단위로 설계된 AES는 8 bit 프로세서에서는 간단 구현이 가능하지만, 32 또는 64 bit 프로세서 등에서는 비효율적
+    - *키 덧셈을 제외한 모든 라운드의 함수를 하나의 Lookup Table로 합치는 것 가능*
+      - 256개의 원소(각 원소는 32 bits를 가짐)를 가지는 4개의 Table 생성
+      - 한 라운드는 16번의 표 탐색으로 계산됨
+  - H/W 구현
+    - DES와 비교해 AES 구현보다 많은 H/W 리소스가 필요하다고 알려짐
+    - 하지만, ASIC 또는 FPGA(Field Programming Gate Array) 기술의 발달 및 AES 암호기술의 병렬처리(Parallelization) 가능 등으로 수월하게 구현되고 있음
+- AES 안전성
+  - 무작위 공격(Brute-Force Attack)은 불가능(Infeasible)하며 이보다 좋은 분석적 공격(Analytical Attack) 또한 존재하지 않는다고 알려짐
